@@ -1,0 +1,14 @@
+{
+  "name": "eva-generator",
+  "version": "1.0.0",
+  "description": "EVA-style text wall generator and random-wall slideshow — static HTML/CSS/JS, no build step.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "npx --yes serve . -l 8642"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<your-username>/<your-repo>.git"
+  }
+}

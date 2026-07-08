@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EVA-Style Random Wall Slideshow</title>
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --panel: #222;
+            --border: #3a3a3a;
+            --fg: #f2f2f2;
+            --muted: #9a9a9a;
+            --accent: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 24px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-align: center;
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif TC", "Noto Serif JP", "PMingLiU", serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+            align-items: flex-start;
+        }
+
+        .controls {
+            flex: 0 0 320px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .controls label {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: .82rem;
+            letter-spacing: .04em;
+            color: var(--muted);
+        }
+
+        .controls label>span:first-child {
+            text-transform: uppercase;
+        }
+
+        textarea,
+        select,
+        input[type="number"] {
+            width: 100%;
+            background: #161616;
+            color: var(--fg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: .95rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        textarea {
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .hint {
+            font-size: .72rem;
+            color: #777;
+            letter-spacing: .02em;
+        }
+
+        textarea:focus,
+        select:focus,
+        input:focus {
+            border-color: #777;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        #intervalValue {
+            color: var(--fg);
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .row label {
+            flex: 1;
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 36px;
+            padding: 2px;
+            background: #161616;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button {
+            background: #fff;
+            color: #000;
+            font-weight: 700;
+            border: 1px solid #fff;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: .9rem;
+            letter-spacing: .05em;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        #goBtn {
+            padding: 14px;
+            font-size: 1.1rem;
+        }
+
+        #goBtn.running {
+            background: #d33;
+            border-color: #d33;
+            color: #fff;
+        }
+
+        #goBtn.running:hover {
+            background: #900;
+            border-color: #900;
+        }
+
+        .preview:fullscreen,
+        .preview:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            max-width: none;
+            align-items: center;
+        }
+
+        .preview:fullscreen #canvas,
+        .preview:-webkit-full-screen #canvas {
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        #customSize {
+            display: flex;
+            gap: 12px;
+        }
+
+        #customSize label {
+            flex: 1;
+        }
+
+        #sizeInfo {
+            margin: 0;
+            font-size: .8rem;
+            color: var(--muted);
+            letter-spacing: .05em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #stopHint {
+            margin: 0;
+            font-size: .78rem;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: .03em;
+            min-height: 1.2em;
+        }
+
+        hr.sep {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2px 0;
+        }
+
+        .pagenav {
+            margin: -12px 0 24px;
+            text-align: center;
+            font-size: .82rem;
+        }
+
+        .pagenav a {
+            color: var(--muted);
+            text-decoration: none;
+            letter-spacing: .04em;
+            border-bottom: 1px solid transparent;
+        }
+
+        .pagenav a:hover {
+            color: var(--fg);
+            border-bottom-color: var(--fg);
+        }
+
+        .preview {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-width: 0;
+        }
+
+        #canvas {
+            max-width: 100%;
+            max-height: 70vh;
+            width: auto;
+            height: auto;
+            border: 1px solid #444;
+            border-radius: 4px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, .5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .controls {
+                flex: none;
+                width: 100%;
+            }
+
+            .preview {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 data-i18n="appTitle">EVA-Style Random Wall Slideshow</h1>
+    <p class="pagenav"><a href="index.html">← Back to Text Wall Generator</a></p>
+    <div class="container">
+        <div class="controls">
+            <label><span data-i18n="uiLang">UI Language</span>
+                <select id="uiLang">
+                    <option value="zh-Hant">正體中文</option>
+                    <option value="en" selected>English</option>
+                </select>
+            </label>
+            <hr class="sep">
+            <label><span data-i18n="labelText">Text Content</span>
+                <textarea id="textInput" rows="4"></textarea>
+                <span class="hint" data-i18n="textHint">Start a line with * for a small caption (e.g. *第壱話)</span>
+            </label>
+            <div class="row">
+                <label><span data-i18n="labelTextColor">Text Color</span>
+                    <input type="color" id="textColor" value="#FFFFFF">
+                </label>
+                <label><span data-i18n="labelBgColor">Background Color</span>
+                    <input type="color" id="bgColor" value="#000000">
+                </label>
+            </div>
+            <hr class="sep">
+            <label><span data-i18n="labelCanvasSize">Canvas Size</span>
+                <select id="sizePreset">
+                    <option value="1920x1080" selected data-i18n="presetLandFHD">Landscape Full HD (1920×1080)</option>
+                    <option value="3840x2160" data-i18n="presetLand4K">Landscape 4K (3840×2160)</option>
+                    <option value="1080x1920" data-i18n="presetPortPhone">Portrait Phone (1080×1920)</option>
+                    <option value="2160x3840" data-i18n="presetPort4K">Portrait 4K (2160×3840)</option>
+                    <option value="1080x1080" data-i18n="presetSquare">Square (1080×1080)</option>
+                    <option value="custom" data-i18n="presetCustom">Custom Size</option>
+                </select>
+            </label>
+            <div id="customSize" style="display:none">
+                <label><span data-i18n="labelW">Width</span> <input type="number" id="customW" min="100" max="5000"
+                        value="1920"></label>
+                <label><span data-i18n="labelH">Height</span> <input type="number" id="customH" min="100" max="5000"
+                        value="1080"></label>
+            </div>
+            <p id="sizeInfo">Output: 1920 × 1080</p>
+            <hr class="sep">
+            <label><span><span data-i18n="labelInterval">Interval: </span><span id="intervalValue">1.7 s</span></span>
+                <input type="range" id="interval" min="0" max="1000" value="500">
+            </label>
+            <label style="flex-direction:row; align-items:center; gap:8px;">
+                <input type="checkbox" id="fullscreenToggle" style="width:auto;">
+                <span data-i18n="labelFullscreen">Fullscreen Mode</span>
+            </label>
+            <button id="goBtn" data-i18n="goBtn">Go</button>
+            <p id="stopHint" data-i18n="stopHintIdle">&nbsp;</p>
+        </div>
+        <div class="preview">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const FONT_STACK = '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif TC", "Noto Serif JP", "PMingLiU", serif';
+
+        const STRINGS = {
+            'zh-Hant': {
+                appTitle: 'EVA 風格隨機文字牆投影',
+                uiLang: '介面語言',
+                labelText: '文字內容',
+                labelTextColor: '文字顏色',
+                labelBgColor: '背景顏色',
+                textHint: '以 * 開頭的行會變成小字註記(如:*第壱話)',
+                labelCanvasSize: '畫布尺寸',
+                presetLandFHD: '橫式 Full HD(1920×1080)',
+                presetLand4K: '橫式 4K(3840×2160)',
+                presetPortPhone: '直式手機(1080×1920)',
+                presetPort4K: '直式 4K(2160×3840)',
+                presetSquare: '正方形(1080×1080)',
+                presetCustom: '自訂尺寸',
+                labelW: '寬',
+                labelH: '高',
+                sizeInfoPrefix: '輸出:',
+                labelInterval: '間隔:',
+                labelFullscreen: '全螢幕模式',
+                goBtn: '開始',
+                stopBtn: '停止',
+                stopHintIdle: '\u00a0',
+                stopHintRunning: '按任意鍵停止'
+            },
+            'en': {
+                appTitle: 'EVA-Style Random Wall Slideshow',
+                uiLang: 'UI Language',
+                labelText: 'Text Content',
+                labelTextColor: 'Text Color',
+                labelBgColor: 'Background Color',
+                textHint: 'Start a line with * for a small caption (e.g. *第壱話)',
+                labelCanvasSize: 'Canvas Size',
+                presetLandFHD: 'Landscape Full HD (1920×1080)',
+                presetLand4K: 'Landscape 4K (3840×2160)',
+                presetPortPhone: 'Portrait Phone (1080×1920)',
+                presetPort4K: 'Portrait 4K (2160×3840)',
+                presetSquare: 'Square (1080×1080)',
+                presetCustom: 'Custom Size',
+                labelW: 'Width',
+                labelH: 'Height',
+                sizeInfoPrefix: 'Output: ',
+                labelInterval: 'Interval: ',
+                labelFullscreen: 'Fullscreen Mode',
+                goBtn: 'Go',
+                stopBtn: 'Stop',
+                stopHintIdle: '\u00a0',
+                stopHintRunning: 'Press any key to stop'
+            }
+        };
+        let currentLang = 'en';
+
+        const uiLang = document.getElementById('uiLang');
+        const textInput = document.getElementById('textInput');
+        const textColor = document.getElementById('textColor');
+        const bgColor = document.getElementById('bgColor');
+        const sizePreset = document.getElementById('sizePreset');
+        const customSize = document.getElementById('customSize');
+        const customW = document.getElementById('customW');
+        const customH = document.getElementById('customH');
+        const sizeInfo = document.getElementById('sizeInfo');
+        const intervalSlider = document.getElementById('interval');
+        const intervalValue = document.getElementById('intervalValue');
+        const fullscreenToggle = document.getElementById('fullscreenToggle');
+        const goBtn = document.getElementById('goBtn');
+        const stopHint = document.getElementById('stopHint');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const previewEl = document.querySelector('.preview');
+
+        const MIN_MS = 10;
+        const MAX_MS = 300000; // 300 seconds
+
+        function sliderToMs(v) {
+            const t = v / 1000;
+            return Math.round(MIN_MS * Math.pow(MAX_MS / MIN_MS, t));
+        }
+
+        function formatInterval(ms) {
+            if (ms < 1000) return `${ms} ms`;
+            const s = ms / 1000;
+            if (s < 60) return `${s < 10 ? s.toFixed(2) : s.toFixed(1)} s`;
+            const m = Math.floor(s / 60);
+            const rem = Math.round(s - m * 60);
+            return `${m}m ${rem}s`;
+        }
+
+        function updateIntervalDisplay() {
+            intervalValue.textContent = formatInterval(sliderToMs(Number(intervalSlider.value)));
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            document.title = STRINGS[lang].appTitle;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                if (el.id === 'stopHint') return; // controlled separately based on running state
+                el.textContent = STRINGS[lang][el.dataset.i18n];
+            });
+            goBtn.textContent = STRINGS[lang][running ? 'stopBtn' : 'goBtn'];
+            stopHint.textContent = running ? STRINGS[lang].stopHintRunning : STRINGS[lang].stopHintIdle;
+            render();
+        }
+
+        function getCanvasSize() {
+            const preset = sizePreset.value;
+            if (preset !== 'custom') {
+                const [w, h] = preset.split('x').map(Number);
+                return { w, h };
+            }
+            const clamp = v => Math.min(5000, Math.max(100, Math.floor(Number(v) || 100)));
+            return { w: clamp(customW.value), h: clamp(customH.value) };
+        }
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Renders one random EVA advanced wall — same generator used by the main
+        // tool's "I'm Feeling Lucky" button — with a freshly rolled fill amount,
+        // tightness, horizontal/vertical ratio and font size on every call.
+        function render() {
+            const { w, h } = getCanvasSize();
+            if (canvas.width !== w) canvas.width = w;
+            if (canvas.height !== h) canvas.height = h;
+            sizeInfo.textContent = STRINGS[currentLang].sizeInfoPrefix + `${w} × ${h}`;
+
+            const text = textInput.value;
+            const fg = textColor.value;
+            const bg = bgColor.value;
+
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+
+            if (text.trim() === '') return;
+
+            const lines = text.split('\n');
+            ctx.fillStyle = fg;
+
+            const baseSize = randInt(24, 400);
+            const fillRatio = Math.random();
+            const tightness = Math.random();
+            const hRatio = Math.random();
+            renderAdvanced(lines, baseSize, w, h, fillRatio, tightness, hRatio, true);
+        }
+
+        // EVA advanced wall: each input line is one "unit" — every character in a
+        // unit shares the same random font size and the same orientation (horizontal
+        // or vertical, reading down or up). Units are packed at random positions with
+        // strict rectangle collision checks (no overlap, ever).
+        function renderAdvanced(lines, baseSize, w, h, fillRatio, tightness, hRatio, allowRepeat) {
+            const units = lines.map(l => l.trim().replace(/^[*＊]\s*/, '')).filter(l => l !== '');
+            if (units.length === 0) return;
+
+            const seed = (hash32(units.join('\n')) ^ Math.imul(w, 2654435761) ^ Math.imul(h, 2246822519)
+                ^ Math.imul(Math.round(fillRatio * 1000) + 1, 40503)
+                ^ Math.imul(Math.round(tightness * 1000) + 1, 3266489917)
+                ^ Math.imul(Math.round(hRatio * 1000) + 1, 668265263)
+                ^ Math.imul((Math.random() * 4294967296) >>> 0, 2654435761)
+                ^ (allowRepeat ? 0x9e3779b9 : 0x85ebca6b)) >>> 0;
+            const rng = mulberry32(seed);
+
+            const targetArea = (0.12 + fillRatio * 0.68) * w * h;
+            const maxPlacements = 24 + Math.round(fillRatio * 260);
+            const maxFails = 50 + Math.round(fillRatio * 150);
+            const gap = Math.max(2, Math.max(w, h) * 0.05 * (1 - tightness));
+
+            function shuffledUnits() {
+                const arr = units.slice();
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(rng() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            const rects = [];
+            function overlaps(fx, fy, fw, fh) {
+                for (const r of rects) {
+                    if (fx < r.x + r.w + gap && fx + fw + gap > r.x &&
+                        fy < r.y + r.h + gap && fy + fh + gap > r.y) return true;
+                }
+                return false;
+            }
+
+            let queue = shuffledUnits(), qi = 0;
+            let placedArea = 0, placements = 0, fails = 0;
+            // Time budget: bail out of packing if it runs long, so one unlucky random
+            // roll (lots of retries) can never stall a frame and blow out the interval.
+            const deadline = performance.now() + 60;
+            let sinceCheck = 0;
+
+            while (placedArea < targetArea && placements < maxPlacements && fails < maxFails) {
+                if (++sinceCheck >= 8) {
+                    sinceCheck = 0;
+                    if (performance.now() > deadline) break;
+                }
+                let text;
+                if (allowRepeat) {
+                    text = units[Math.floor(rng() * units.length)];
+                } else {
+                    if (qi >= queue.length) break;
+                    text = queue[qi++];
+                }
+
+                let size = baseSize * (0.3 + rng() * 1.1);
+                const horizontal = rng() < hRatio;
+                const orient = horizontal ? 'h' : (rng() < 0.5 ? 'down' : 'up');
+                let placedOk = false;
+
+                for (let shrink = 0; shrink < 6 && !placedOk; shrink++) {
+                    const rawLineW = Math.max(size * 1.3, size * (2 + rng() * 7));
+                    const lineCap = Math.min(rawLineW, Math.max(w, h) * 0.85);
+                    const wrapped = wrapUnit(text, size, lineCap);
+                    const lineHeight = size * 1.05;
+                    const blockW = lineCap;
+                    const blockH = wrapped.length * lineHeight;
+                    const footprintW = horizontal ? blockW : blockH;
+                    const footprintH = horizontal ? blockH : blockW;
+
+                    if (footprintW <= w && footprintH <= h) {
+                        for (let t = 0; t < 40 && !placedOk; t++) {
+                            const fx = rng() * (w - footprintW);
+                            const fy = rng() * (h - footprintH);
+                            if (!overlaps(fx, fy, footprintW, footprintH)) {
+                                const o = advancedOrigin(fx, fy, footprintW, footprintH, orient);
+                                drawUnitBlock(o.x, o.y, o.angle, wrapped, size, blockW);
+                                rects.push({ x: fx, y: fy, w: footprintW, h: footprintH });
+                                placedArea += footprintW * footprintH;
+                                placements++;
+                                placedOk = true;
+                            }
+                        }
+                    }
+                    if (!placedOk) size *= 0.82;
+                }
+
+                fails = placedOk ? 0 : fails + 1;
+            }
+        }
+
+        // Greedy word/character wrap: Latin runs stay whole, CJK and other symbols
+        // wrap per character, so a unit's text fills its box without splitting words.
+        function wrapUnit(text, size, maxW) {
+            ctx.font = `900 ${size}px ${FONT_STACK}`;
+            const minW = Math.max(maxW, size * 1.1);
+            const tokens = text.match(/[A-Za-z0-9'-]+|\s+|\S/gu) || [text];
+            const lines = [];
+            let cur = '';
+            for (const tok of tokens) {
+                const test = cur + tok;
+                if (cur !== '' && ctx.measureText(test.trim()).width > minW) {
+                    lines.push(cur.trim());
+                    cur = tok.trimStart();
+                } else {
+                    cur = test;
+                }
+            }
+            if (cur.trim() !== '') lines.push(cur.trim());
+            return lines.length ? lines : [text];
+        }
+
+        // Translates a footprint rectangle + orientation into the canvas anchor
+        // point and rotation angle needed so the block's local (0,0) origin, once
+        // rotated, exactly fills that rectangle.
+        function advancedOrigin(fx, fy, footprintW, footprintH, orient) {
+            if (orient === 'h') return { x: fx, y: fy, angle: 0 };
+            if (orient === 'down') return { x: fx + footprintW, y: fy, angle: Math.PI / 2 };
+            return { x: fx, y: fy + footprintH, angle: -Math.PI / 2 };
+        }
+
+        // Draws a unit's wrapped lines, each stretched to fill blockW via
+        // drawJustifiedLine, in local coordinates anchored/rotated at (originX, originY).
+        function drawUnitBlock(originX, originY, angle, wrappedLines, size, blockW) {
+            const lineHeight = size * 1.05;
+            ctx.save();
+            ctx.translate(originX, originY);
+            if (angle) ctx.rotate(angle);
+            ctx.textBaseline = 'middle';
+            wrappedLines.forEach((line, i) => {
+                const ly = lineHeight / 2 + i * lineHeight;
+                drawJustifiedLine(line, ly, size, blockW, 0);
+            });
+            ctx.restore();
+        }
+
+        function hash32(str) {
+            let x = 2166136261;
+            for (const ch of str) {
+                x ^= ch.codePointAt(0);
+                x = Math.imul(x, 16777619);
+            }
+            return x >>> 0;
+        }
+
+        function mulberry32(a) {
+            return function () {
+                a |= 0; a = a + 0x6D2B79F5 | 0;
+                let t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        // Draw one line with its characters spread so the first and last character
+        // sit flush with the edges of the target width. x0 defaults to centering the
+        // block on the canvas.
+        function drawJustifiedLine(line, y, size, targetW, x0) {
+            ctx.font = `900 ${size}px ${FONT_STACK}`;
+            if (x0 === undefined) x0 = (canvas.width - targetW) / 2;
+            const chars = Array.from(line);
+            if (chars.length <= 1) {
+                ctx.textAlign = 'center';
+                ctx.fillText(line, x0 + targetW / 2, y);
+                return;
+            }
+            const widths = chars.map(c => ctx.measureText(c).width);
+            const charsW = widths.reduce((a, b) => a + b, 0);
+            const gap = (targetW - charsW) / (chars.length - 1);
+            ctx.textAlign = 'left';
+            let x = x0;
+            chars.forEach((c, i) => {
+                ctx.fillText(c, x, y);
+                x += widths[i] + gap;
+            });
+        }
+
+        // --- Fullscreen handling ---
+        function requestFS(el) {
+            const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+            if (fn) fn.call(el).catch(() => { });
+        }
+
+        function exitFS() {
+            const fn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            if (fn) fn.call(document).catch(() => { });
+        }
+
+        function isFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+        }
+
+        // The checkbox only records the user's preference — it has no immediate
+        // effect. Fullscreen is actually requested/exited only when Go starts
+        // or stops the slideshow (see start()/stop() below).
+        ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(evt => {
+            document.addEventListener(evt, () => { fullscreenToggle.checked = isFullscreen(); });
+        });
+
+        // --- Slideshow loop control ---
+        // Uses requestAnimationFrame so painting stays in sync with the browser's
+        // compositor (smooth, no tearing) while an absolute "nextTime" target
+        // self-corrects for drift caused by render time or event-loop jitter,
+        // instead of letting delays compound like a naive chained setTimeout would.
+        let running = false;
+        let rafId = null;
+        let nextTime = 0;
+
+        function loop(now) {
+            if (!running) return;
+            if (now >= nextTime) {
+                render();
+                const intervalMs = sliderToMs(Number(intervalSlider.value));
+                nextTime += intervalMs;
+                // If a render took longer than the interval (or the tab was throttled
+                // in the background), don't try to "catch up" with a burst of frames.
+                if (nextTime < now) nextTime = now + intervalMs;
+            }
+            rafId = requestAnimationFrame(loop);
+        }
+
+        function stopOnKey() {
+            stop();
+        }
+
+        function start() {
+            running = true;
+            goBtn.textContent = STRINGS[currentLang].stopBtn;
+            goBtn.classList.add('running');
+            stopHint.textContent = STRINGS[currentLang].stopHintRunning;
+            if (fullscreenToggle.checked && !isFullscreen()) requestFS(previewEl);
+            nextTime = performance.now();
+            rafId = requestAnimationFrame(loop);
+            document.addEventListener('keydown', stopOnKey);
+        }
+
+        function stop() {
+            running = false;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+            goBtn.textContent = STRINGS[currentLang].goBtn;
+            goBtn.classList.remove('running');
+            stopHint.textContent = STRINGS[currentLang].stopHintIdle;
+            document.removeEventListener('keydown', stopOnKey);
+        }
+
+        goBtn.addEventListener('click', () => {
+            if (running) stop(); else start();
+        });
+
+        uiLang.addEventListener('change', () => setLanguage(uiLang.value));
+        textInput.addEventListener('input', () => { if (!running) render(); });
+        textColor.addEventListener('input', () => { if (!running) render(); });
+        bgColor.addEventListener('input', () => { if (!running) render(); });
+        sizePreset.addEventListener('change', () => {
+            customSize.style.display = sizePreset.value === 'custom' ? 'flex' : 'none';
+            if (!running) render();
+        });
+        customW.addEventListener('input', () => { if (!running) render(); });
+        customH.addEventListener('input', () => { if (!running) render(); });
+        intervalSlider.addEventListener('input', updateIntervalDisplay);
+
+        textInput.value = '新世紀\nエヴァンゲリオン\n*第壱話\n使徒、襲来';
+        updateIntervalDisplay();
+        setLanguage('en');
+    </script>
+</body>
+
+</html>

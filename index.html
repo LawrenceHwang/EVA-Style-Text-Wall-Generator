@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EVA-Style Text Wall Generator</title>
+  <style>
+    :root {
+      --bg: #1a1a1a;
+      --panel: #222;
+      --border: #3a3a3a;
+      --fg: #f2f2f2;
+      --muted: #9a9a9a;
+      --accent: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-align: center;
+      font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif TC", "Noto Serif JP", "PMingLiU", serif;
+    }
+
+    .container {
+      display: flex;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    .controls {
+      flex: 0 0 320px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .controls label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: .82rem;
+      letter-spacing: .04em;
+      color: var(--muted);
+    }
+
+    .controls label>span:first-child {
+      text-transform: uppercase;
+    }
+
+    textarea,
+    select,
+    input[type="number"] {
+      width: 100%;
+      background: #161616;
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: .95rem;
+      font-family: inherit;
+      outline: none;
+    }
+
+    textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .hint {
+      font-size: .72rem;
+      color: #777;
+      letter-spacing: .02em;
+    }
+
+    textarea:focus,
+    select:focus,
+    input:focus {
+      border-color: #777;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    #sizeValue {
+      color: var(--fg);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .row label {
+      flex: 1;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 36px;
+      padding: 2px;
+      background: #161616;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button {
+      background: #fff;
+      color: #000;
+      font-weight: 700;
+      border: 1px solid #fff;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: .9rem;
+      letter-spacing: .05em;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      font-family: inherit;
+    }
+
+    button:hover {
+      background: #000;
+      color: #fff;
+    }
+
+    #downloadBtn {
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+
+    #customSize {
+      display: flex;
+      gap: 12px;
+    }
+
+    #customSize label {
+      flex: 1;
+    }
+
+    #sizeInfo {
+      margin: 0;
+      font-size: .8rem;
+      color: var(--muted);
+      letter-spacing: .05em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    hr.sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2px 0;
+    }
+
+    .pagenav {
+      margin: -12px 0 24px;
+      text-align: center;
+      font-size: .82rem;
+    }
+
+    .pagenav a {
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: .04em;
+      border-bottom: 1px solid transparent;
+    }
+
+    .pagenav a:hover {
+      color: var(--fg);
+      border-bottom-color: var(--fg);
+    }
+
+    align-items: flex-start;
+    min-width: 0;
+    }
+
+    #canvas {
+      max-width: 100%;
+      max-height: 70vh;
+      width: auto;
+      height: auto;
+      border: 1px solid #444;
+      border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, .5);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .controls {
+        flex: none;
+        width: 100%;
+      }
+
+      .preview {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1 data-i18n="appTitle">EVA-Style Text Wall Generator</h1>
+  <p class="pagenav"><a href="slideshow.html">Random Wall Slideshow →</a></p>
+  <div class="container">
+    <div class="controls">
+      <label><span data-i18n="uiLang">UI Language</span>
+        <select id="uiLang">
+          <option value="zh-Hant">正體中文</option>
+          <option value="en" selected>English</option>
+        </select>
+      </label>
+      <hr class="sep">
+      <label><span data-i18n="labelText">Text Content</span>
+        <textarea id="textInput" rows="4"></textarea>
+        <span class="hint" data-i18n="textHint">Start a line with * for a small caption (e.g. *第壱話)</span>
+      </label>
+      <label><span data-i18n="labelArrange">Text Arrangement</span>
+        <select id="arrangement">
+          <option value="eva" selected data-i18n="arrangeEva">EVA Title Card (justified lines)</option>
+          <option value="wall" data-i18n="arrangeWall">EVA Text Wall (vertical + horizontal)</option>
+          <option value="advanced" data-i18n="arrangeAdvanced">EVA Advanced Wall (random units, no overlap)</option>
+          <option value="standard" data-i18n="arrangeStandard">Centered (uniform size)</option>
+        </select>
+      </label>
+      <div id="advancedControls" style="display:none; flex-direction:column; gap:14px;">
+        <label style="flex-direction:row; align-items:center; gap:8px;">
+          <input type="checkbox" id="wallRepeat" checked style="width:auto;">
+          <span data-i18n="labelRepeat">Allow Repeating Units</span>
+        </label>
+        <label><span><span data-i18n="labelFill">Fill Amount: </span><span id="wallFillValue">60%</span></span>
+          <input type="range" id="wallFill" min="0" max="100" value="60">
+        </label>
+        <label><span><span data-i18n="labelTightness">Tightness: </span><span id="wallTightnessValue">50%</span></span>
+          <input type="range" id="wallTightness" min="0" max="100" value="50">
+        </label>
+        <label><span><span data-i18n="labelRatio">Horizontal Ratio: </span><span id="wallRatioValue">80%</span></span>
+          <input type="range" id="wallRatio" min="0" max="100" value="80">
+        </label>
+        <button id="luckyBtn" type="button" data-i18n="luckyBtn">I'm Feeling Lucky</button>
+      </div>
+      <label><span><span data-i18n="labelFontSize">Font Size: </span><span id="sizeValue">120px</span></span>
+        <input type="range" id="fontSize" min="24" max="400" value="120">
+      </label>
+      <div class="row">
+        <label><span data-i18n="labelTextColor">Text Color</span>
+          <input type="color" id="textColor" value="#FFFFFF">
+        </label>
+        <label><span data-i18n="labelBgColor">Background Color</span>
+          <input type="color" id="bgColor" value="#000000">
+        </label>
+      </div>
+      <button id="resetColors" data-i18n="resetColors">Reset to White on Black</button>
+      <hr class="sep">
+      <label><span data-i18n="labelCanvasSize">Canvas Size</span>
+        <select id="sizePreset">
+          <option value="1920x1080" selected data-i18n="presetLandFHD">Landscape Full HD (1920×1080)</option>
+          <option value="3840x2160" data-i18n="presetLand4K">Landscape 4K (3840×2160)</option>
+          <option value="1080x1920" data-i18n="presetPortPhone">Portrait Phone (1080×1920)</option>
+          <option value="2160x3840" data-i18n="presetPort4K">Portrait 4K (2160×3840)</option>
+          <option value="1080x1080" data-i18n="presetSquare">Square (1080×1080)</option>
+          <option value="custom" data-i18n="presetCustom">Custom Size</option>
+        </select>
+      </label>
+      <div id="customSize" style="display:none">
+        <label><span data-i18n="labelW">Width</span> <input type="number" id="customW" min="100" max="5000"
+            value="1920"></label>
+        <label><span data-i18n="labelH">Height</span> <input type="number" id="customH" min="100" max="5000"
+            value="1080"></label>
+      </div>
+      <p id="sizeInfo">Output: 1920 × 1080</p>
+      <button id="downloadBtn" data-i18n="downloadBtn">Download PNG</button>
+    </div>
+    <div class="preview">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const FONT_STACK = '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif TC", "Noto Serif JP", "PMingLiU", serif';
+
+    const STRINGS = {
+      'zh-Hant': {
+        appTitle: 'EVA 風格文字牆產生器',
+        uiLang: '介面語言',
+        labelText: '文字內容',
+        labelFontSize: '文字大小:',
+        labelTextColor: '文字顏色',
+        labelBgColor: '背景顏色',
+        resetColors: '重設為黑底白字',
+        labelArrange: '文字排列',
+        arrangeEva: 'EVA 標題卡(逐行撐滿)',
+        arrangeWall: 'EVA 文字牆(縱橫混排)',
+        arrangeAdvanced: 'EVA 進階牆(隨機單元,不重疊)',
+        arrangeStandard: '標準置中(單一大小)',
+        labelRepeat: '允許重複單元',
+        labelFill: '填滿程度:',
+        labelTightness: '緊密度:',
+        labelRatio: '水平比例:',
+        luckyBtn: '隨機手氣',
+        textHint: '以 * 開頭的行會變成小字註記(如:*第壱話)',
+        labelCanvasSize: '畫布尺寸',
+        presetLandFHD: '橫式 Full HD(1920×1080)',
+        presetLand4K: '橫式 4K(3840×2160)',
+        presetPortPhone: '直式手機(1080×1920)',
+        presetPort4K: '直式 4K(2160×3840)',
+        presetSquare: '正方形(1080×1080)',
+        presetCustom: '自訂尺寸',
+        labelW: '寬',
+        labelH: '高',
+        sizeInfoPrefix: '輸出:',
+        downloadBtn: '下載 PNG'
+      },
+      'en': {
+        appTitle: 'EVA-Style Text Wall Generator',
+        uiLang: 'UI Language',
+        labelText: 'Text Content',
+        labelFontSize: 'Font Size: ',
+        labelTextColor: 'Text Color',
+        labelBgColor: 'Background Color',
+        resetColors: 'Reset to White on Black',
+        labelArrange: 'Text Arrangement',
+        arrangeEva: 'EVA Title Card (justified lines)',
+        arrangeWall: 'EVA Text Wall (vertical + horizontal)',
+        arrangeAdvanced: 'EVA Advanced Wall (random units, no overlap)',
+        arrangeStandard: 'Centered (uniform size)',
+        labelRepeat: 'Allow Repeating Units',
+        labelFill: 'Fill Amount: ',
+        labelTightness: 'Tightness: ',
+        labelRatio: 'Horizontal Ratio: ',
+        luckyBtn: "I'm Feeling Lucky",
+        textHint: 'Start a line with * for a small caption (e.g. *第壱話)',
+        labelCanvasSize: 'Canvas Size',
+        presetLandFHD: 'Landscape Full HD (1920×1080)',
+        presetLand4K: 'Landscape 4K (3840×2160)',
+        presetPortPhone: 'Portrait Phone (1080×1920)',
+        presetPort4K: 'Portrait 4K (2160×3840)',
+        presetSquare: 'Square (1080×1080)',
+        presetCustom: 'Custom Size',
+        labelW: 'Width',
+        labelH: 'Height',
+        sizeInfoPrefix: 'Output: ',
+        downloadBtn: 'Download PNG'
+      }
+    };
+    let currentLang = 'en';
+
+    const uiLang = document.getElementById('uiLang');
+    const textInput = document.getElementById('textInput');
+    const fontSize = document.getElementById('fontSize');
+    const sizeValue = document.getElementById('sizeValue');
+    const textColor = document.getElementById('textColor');
+    const bgColor = document.getElementById('bgColor');
+    const resetColors = document.getElementById('resetColors');
+    const arrangement = document.getElementById('arrangement');
+    const advancedControls = document.getElementById('advancedControls');
+    const wallRepeat = document.getElementById('wallRepeat');
+    const wallFill = document.getElementById('wallFill');
+    const wallFillValue = document.getElementById('wallFillValue');
+    const wallTightness = document.getElementById('wallTightness');
+    const wallTightnessValue = document.getElementById('wallTightnessValue');
+    const wallRatio = document.getElementById('wallRatio');
+    const wallRatioValue = document.getElementById('wallRatioValue');
+    const luckyBtn = document.getElementById('luckyBtn');
+    const sizePreset = document.getElementById('sizePreset');
+    const customSize = document.getElementById('customSize');
+    const customW = document.getElementById('customW');
+    const customH = document.getElementById('customH');
+    const sizeInfo = document.getElementById('sizeInfo');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang;
+      document.title = STRINGS[lang].appTitle;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        el.textContent = STRINGS[lang][el.dataset.i18n];
+      });
+      render();
+    }
+
+    function getCanvasSize() {
+      const preset = sizePreset.value;
+      if (preset !== 'custom') {
+        const [w, h] = preset.split('x').map(Number);
+        return { w, h };
+      }
+      const clamp = v => Math.min(5000, Math.max(100, Math.floor(Number(v) || 100)));
+      return { w: clamp(customW.value), h: clamp(customH.value) };
+    }
+
+    function render() {
+      const { w, h } = getCanvasSize();
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+      sizeInfo.textContent = STRINGS[currentLang].sizeInfoPrefix + `${w} × ${h}`;
+
+      const text = textInput.value;
+      let size = Number(fontSize.value);
+      const fg = textColor.value;
+      const bg = bgColor.value;
+
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      if (text.trim() === '') return;
+
+      const lines = text.split('\n');
+      ctx.fillStyle = fg;
+
+      if (arrangement.value === 'eva') {
+        renderEva(lines, size, w, h);
+        return;
+      }
+      if (arrangement.value === 'wall') {
+        renderWall(lines, size, w, h);
+        return;
+      }
+      if (arrangement.value === 'advanced') {
+        renderAdvanced(lines, size, w, h);
+        return;
+      }
+
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+      let maxWidth = 0;
+      for (const line of lines) {
+        maxWidth = Math.max(maxWidth, ctx.measureText(line).width);
+      }
+      if (maxWidth > w * 0.92) {
+        size = Math.floor(size * (w * 0.92) / maxWidth);
+      }
+
+      const totalH = size * 1.05 * lines.length;
+      if (totalH > h * 0.92) {
+        size = Math.floor(size * (h * 0.92) / totalH);
+      }
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+
+      const lineHeight = size * 1.05;
+      const totalHeight = lineHeight * lines.length;
+      const startY = (h - totalHeight) / 2 + lineHeight / 2;
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, w / 2, startY + i * lineHeight);
+      });
+    }
+
+    // EVA title-card layout: title lines are scaled per line to fill a common
+    // block width with characters flush to both edges; lines starting with *
+    // become small left-aligned captions, like 第壱話 on the episode cards.
+    function renderEva(lines, baseSize, w, h) {
+      const parsed = lines.map(raw => {
+        const t = raw.trim();
+        if (t.startsWith('*') || t.startsWith('＊')) {
+          return { text: t.slice(1).trim(), small: true, size: 0 };
+        }
+        return { text: t, small: false, size: 0 };
+      });
+      let titles = parsed.filter(p => !p.small && p.text !== '');
+      if (titles.length === 0) {
+        // Only captions were given — promote them so something renders big.
+        parsed.forEach(p => { p.small = false; });
+        titles = parsed.filter(p => p.text !== '');
+        if (titles.length === 0) return;
+      }
+
+      // Block width: the widest title line at the slider size, capped at 92%.
+      ctx.font = `900 ${baseSize}px ${FONT_STACK}`;
+      let natural = 0;
+      for (const p of titles) {
+        natural = Math.max(natural, ctx.measureText(p.text).width);
+      }
+      let targetW = Math.min(natural, w * 0.92);
+
+      // Each title line fills the block; each caption hangs off its nearest title.
+      parsed.forEach(p => {
+        if (!p.small && p.text !== '') {
+          p.size = baseSize * targetW / ctx.measureText(p.text).width;
+        }
+      });
+      parsed.forEach((p, i) => {
+        if (!p.small || p.text === '') return;
+        let ref = null;
+        for (let j = i + 1; j < parsed.length && !ref; j++) {
+          if (!parsed[j].small && parsed[j].text !== '') ref = parsed[j];
+        }
+        for (let j = i - 1; j >= 0 && !ref; j--) {
+          if (!parsed[j].small && parsed[j].text !== '') ref = parsed[j];
+        }
+        p.size = (ref ? ref.size : baseSize) * 0.38;
+        const capW = captionWidth(p.text, p.size);
+        if (capW > targetW) p.size *= targetW / capW;
+      });
+
+      // Height constraint: shrink sizes and block width proportionally on overflow.
+      let refSize = Math.max(...titles.map(p => p.size));
+      const totalH = () => parsed.reduce((s, p) =>
+        s + (p.text === '' ? refSize * 0.4 : p.size * (p.small ? 1.6 : 1.05)), 0);
+      if (totalH() > h * 0.92) {
+        const k = h * 0.92 / totalH();
+        parsed.forEach(p => { p.size *= k; });
+        refSize *= k;
+        targetW *= k;
+      }
+
+      let y = (h - totalH()) / 2;
+      const blockLeft = (w - targetW) / 2;
+      ctx.textBaseline = 'middle';
+      parsed.forEach(p => {
+        const lh = p.text === '' ? refSize * 0.4 : p.size * (p.small ? 1.6 : 1.05);
+        y += lh / 2;
+        if (p.text !== '') {
+          if (p.small) drawCaption(p.text, y, p.size, blockLeft);
+          else drawJustifiedLine(p.text, y, p.size, targetW);
+        }
+        y += lh / 2;
+      });
+    }
+
+    function captionWidth(text, size) {
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+      const chars = Array.from(text);
+      const glyphs = chars.reduce((s, c) => s + ctx.measureText(c).width, 0);
+      return glyphs + size * 0.15 * Math.max(0, chars.length - 1);
+    }
+
+    // Caption line: compact, flush with the block's left edge, lightly tracked.
+    function drawCaption(text, y, size, x0) {
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+      ctx.textAlign = 'left';
+      let x = x0;
+      for (const c of Array.from(text)) {
+        ctx.fillText(c, x, y);
+        x += ctx.measureText(c).width + size * 0.15;
+      }
+    }
+
+    // EVA text-wall collage: the canvas is carved into rows, each row into cells;
+    // a cell holds one big justified phrase or a stack of tiny lines, with the
+    // occasional inverted block. Seeded by the text so the composition is stable.
+    function renderWall(lines, baseSize, w, h) {
+      const segs = lines.map(l => l.trim().replace(/^[*＊]\s*/, '')).filter(l => l !== '');
+      if (segs.length === 0) return;
+      const rng = mulberry32(hash32(segs.join('\n')) ^ Math.imul(w, 2654435761) ^ h);
+      const scale = baseSize / 120;
+      const pick = () => segs[Math.floor(rng() * segs.length)];
+      const fg = textColor.value, bg = bgColor.value;
+
+      // Pick a phrase and usually pack more on until the text spans the target
+      // length; sometimes leave a single phrase spread wide, which turns short
+      // words into giant spaced glyphs (涙 / 覚醒 blocks). Shrinks the font if
+      // the packed text overshoots the target.
+      function packPhrase(size, target) {
+        ctx.font = `900 ${size}px ${FONT_STACK}`;
+        let str = pick(), g = 0;
+        if (rng() >= 0.28) {
+          while (ctx.measureText(str).width < target * 0.94 && g++ < 80) str += pick();
+        }
+        const tw = ctx.measureText(str).width;
+        if (tw > target) size *= target / tw;
+        return { str, size };
+      }
+
+      // Vertical section: whole runs of text rotated 90° or 270°, drawn as
+      // parallel strips filling the cell flush, occasionally inverted.
+      function cellVertical(cx, cw, top, bandH) {
+        const pitch = Math.max(12, Math.min(cw, bandH * (0.15 + rng() * 0.35)));
+        const nStrips = Math.max(1, Math.min(40, Math.round(cw / pitch)));
+        const stripW = cw / nStrips;
+        const down = rng() < 0.5;
+        let ink = fg;
+        if (rng() < 0.07) {
+          ctx.fillStyle = fg;
+          ctx.fillRect(cx, top, cw, bandH);
+          ink = bg;
+        }
+        ctx.fillStyle = ink;
+        for (let i = 0; i < nStrips; i++) {
+          const { str, size } = packPhrase(stripW * 0.78, bandH);
+          const xMid = cx + stripW * (i + 0.5);
+          ctx.save();
+          if (down) {
+            ctx.translate(xMid, top);
+            ctx.rotate(Math.PI / 2);
+          } else {
+            ctx.translate(xMid, top + bandH);
+            ctx.rotate(-Math.PI / 2);
+          }
+          drawJustifiedLine(str, 0, size, bandH, 0);
+          ctx.restore();
+        }
+        ctx.fillStyle = fg;
+      }
+
+      // One line of text justified into a cell band, occasionally inverted.
+      function cellLine(cx, cw, top, bandH) {
+        const { str, size } = packPhrase(bandH * 0.78, cw);
+        if (rng() < 0.07) {
+          ctx.fillStyle = fg;
+          ctx.fillRect(cx, top, cw, bandH);
+          ctx.fillStyle = bg;
+          drawJustifiedLine(str, top + bandH / 2, size, cw * 0.96, cx + cw * 0.02);
+          ctx.fillStyle = fg;
+        } else {
+          drawJustifiedLine(str, top + bandH / 2, size, cw, cx);
+        }
+      }
+
+      ctx.textBaseline = 'middle';
+      let y = 0, guard = 0;
+      while (y < h - 4 && guard++ < 400) {
+        const r = rng();
+        let rowH = r < 0.22 ? h * (0.11 + rng() * 0.15)
+          : r < 0.68 ? h * (0.05 + rng() * 0.04)
+            : h * (0.024 + rng() * 0.018);
+        rowH = Math.max(16, rowH * scale);
+        if (y + rowH > h) rowH = h - y;
+
+        // Split the row into 1–3 cells of uneven widths.
+        let widths;
+        const cs = rowH > h * 0.045 ? rng() : 0;
+        if (cs < 0.3) widths = [w];
+        else if (cs < 0.8) {
+          const c = w * (0.28 + rng() * 0.44);
+          widths = [c, w - c];
+        } else {
+          const c1 = w * (0.22 + rng() * 0.2);
+          const c2 = w * (0.62 + rng() * 0.18);
+          widths = [c1, c2 - c1, w - c2];
+        }
+
+        let x = 0;
+        for (const cw of widths) {
+          // A cell is a rotated vertical section, one big line, or a stack of
+          // 2–3 smaller lines. Rotation favors tall, narrow cells.
+          if (rowH > 44 && rng() < (cw <= rowH * 3 ? 0.38 : 0.12)) {
+            cellVertical(x, cw, y, rowH);
+          } else {
+            const sub = rowH > 40 && rng() < 0.45 ? (rng() < 0.6 ? 2 : 3) : 1;
+            const bandH = rowH / sub;
+            for (let s = 0; s < sub; s++) {
+              cellLine(x, cw, y + bandH * s, bandH);
+            }
+          }
+          x += cw;
+        }
+        y += rowH;
+      }
+    }
+
+    // EVA advanced wall: each input line is one "unit" — every character in a
+    // unit shares the same random font size and the same orientation (horizontal
+    // or vertical, reading down or up). Units are packed at random positions with
+    // strict rectangle collision checks (no overlap, ever). Sliders control how
+    // much of the canvas gets filled, how close units may sit to each other, and
+    // the horizontal/vertical mix.
+    function renderAdvanced(lines, baseSize, w, h) {
+      const units = lines.map(l => l.trim().replace(/^[*＊]\s*/, '')).filter(l => l !== '');
+      if (units.length === 0) return;
+
+      const allowRepeat = wallRepeat.checked;
+      const fillRatio = Number(wallFill.value) / 100;
+      const tightness = Number(wallTightness.value) / 100;
+      const hRatio = Number(wallRatio.value) / 100;
+
+      const seed = (hash32(units.join('\n')) ^ Math.imul(w, 2654435761) ^ Math.imul(h, 2246822519)
+        ^ Math.imul(Math.round(fillRatio * 1000) + 1, 40503)
+        ^ Math.imul(Math.round(tightness * 1000) + 1, 3266489917)
+        ^ Math.imul(Math.round(hRatio * 1000) + 1, 668265263)
+        ^ (allowRepeat ? 0x9e3779b9 : 0x85ebca6b)) >>> 0;
+      const rng = mulberry32(seed);
+
+      // Fill amount: how much of the canvas area the packer tries to cover, and
+      // how many placement attempts / repeats of the unit list it's allowed.
+      const targetArea = (0.12 + fillRatio * 0.68) * w * h;
+      const maxPlacements = 24 + Math.round(fillRatio * 260);
+      const maxFails = 50 + Math.round(fillRatio * 150);
+      // Tightness: 0 = generous gap between units, 1 = units may sit flush.
+      const gap = Math.max(2, Math.max(w, h) * 0.05 * (1 - tightness));
+
+      function shuffledUnits() {
+        const arr = units.slice();
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      const rects = [];
+      function overlaps(fx, fy, fw, fh) {
+        for (const r of rects) {
+          if (fx < r.x + r.w + gap && fx + fw + gap > r.x &&
+            fy < r.y + r.h + gap && fy + fh + gap > r.y) return true;
+        }
+        return false;
+      }
+
+      let queue = shuffledUnits(), qi = 0;
+      let placedArea = 0, placements = 0, fails = 0;
+
+      while (placedArea < targetArea && placements < maxPlacements && fails < maxFails) {
+        let text;
+        if (allowRepeat) {
+          // Repeats are picked at random each draw, so some units may appear
+          // several times and others not at all — not an even round-robin.
+          text = units[Math.floor(rng() * units.length)];
+        } else {
+          if (qi >= queue.length) break;
+          text = queue[qi++];
+        }
+
+        // The whole unit — however many wrapped lines it takes — gets one size
+        // and one orientation, decided once, up front.
+        let size = baseSize * (0.3 + rng() * 1.1);
+        const horizontal = rng() < hRatio;
+        const orient = horizontal ? 'h' : (rng() < 0.5 ? 'down' : 'up');
+        let placedOk = false;
+
+        for (let shrink = 0; shrink < 6 && !placedOk; shrink++) {
+          const rawLineW = Math.max(size * 1.3, size * (2 + rng() * 7));
+          const lineCap = Math.min(rawLineW, Math.max(w, h) * 0.85);
+          const wrapped = wrapUnit(text, size, lineCap);
+          const lineHeight = size * 1.05;
+          const blockW = lineCap;
+          const blockH = wrapped.length * lineHeight;
+          const footprintW = horizontal ? blockW : blockH;
+          const footprintH = horizontal ? blockH : blockW;
+
+          if (footprintW <= w && footprintH <= h) {
+            for (let t = 0; t < 40 && !placedOk; t++) {
+              const fx = rng() * (w - footprintW);
+              const fy = rng() * (h - footprintH);
+              if (!overlaps(fx, fy, footprintW, footprintH)) {
+                const o = advancedOrigin(fx, fy, footprintW, footprintH, orient);
+                drawUnitBlock(o.x, o.y, o.angle, wrapped, size, blockW);
+                rects.push({ x: fx, y: fy, w: footprintW, h: footprintH });
+                placedArea += footprintW * footprintH;
+                placements++;
+                placedOk = true;
+              }
+            }
+          }
+          if (!placedOk) size *= 0.82;
+        }
+
+        fails = placedOk ? 0 : fails + 1;
+      }
+    }
+
+    // Greedy word/character wrap: Latin runs stay whole, CJK and other symbols
+    // wrap per character, so a unit's text fills its box without splitting words.
+    function wrapUnit(text, size, maxW) {
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+      const minW = Math.max(maxW, size * 1.1);
+      const tokens = text.match(/[A-Za-z0-9'-]+|\s+|\S/gu) || [text];
+      const lines = [];
+      let cur = '';
+      for (const tok of tokens) {
+        const test = cur + tok;
+        if (cur !== '' && ctx.measureText(test.trim()).width > minW) {
+          lines.push(cur.trim());
+          cur = tok.trimStart();
+        } else {
+          cur = test;
+        }
+      }
+      if (cur.trim() !== '') lines.push(cur.trim());
+      return lines.length ? lines : [text];
+    }
+
+    // Translates a footprint rectangle + orientation into the canvas anchor
+    // point and rotation angle needed so the block's local (0,0) origin, once
+    // rotated, exactly fills that rectangle. 'down' reads top-to-bottom with
+    // columns proceeding right-to-left; 'up' reads bottom-to-top, columns
+    // proceeding left-to-right — the two vertical conventions seen in EVA art.
+    function advancedOrigin(fx, fy, footprintW, footprintH, orient) {
+      if (orient === 'h') return { x: fx, y: fy, angle: 0 };
+      if (orient === 'down') return { x: fx + footprintW, y: fy, angle: Math.PI / 2 };
+      return { x: fx, y: fy + footprintH, angle: -Math.PI / 2 };
+    }
+
+    // Draws a unit's wrapped lines, each stretched to fill blockW via
+    // drawJustifiedLine, in local coordinates anchored/rotated at (originX, originY).
+    function drawUnitBlock(originX, originY, angle, wrappedLines, size, blockW) {
+      const lineHeight = size * 1.05;
+      ctx.save();
+      ctx.translate(originX, originY);
+      if (angle) ctx.rotate(angle);
+      ctx.textBaseline = 'middle';
+      wrappedLines.forEach((line, i) => {
+        const ly = lineHeight / 2 + i * lineHeight;
+        drawJustifiedLine(line, ly, size, blockW, 0);
+      });
+      ctx.restore();
+    }
+
+    function hash32(str) {
+      let x = 2166136261;
+      for (const ch of str) {
+        x ^= ch.codePointAt(0);
+        x = Math.imul(x, 16777619);
+      }
+      return x >>> 0;
+    }
+
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    // Draw one line with its characters spread so the first and last character
+    // sit flush with the edges of the target width. x0 defaults to centering the
+    // block on the canvas.
+    function drawJustifiedLine(line, y, size, targetW, x0) {
+      ctx.font = `900 ${size}px ${FONT_STACK}`;
+      if (x0 === undefined) x0 = (canvas.width - targetW) / 2;
+      const chars = Array.from(line);
+      if (chars.length <= 1) {
+        ctx.textAlign = 'center';
+        ctx.fillText(line, x0 + targetW / 2, y);
+        return;
+      }
+      const widths = chars.map(c => ctx.measureText(c).width);
+      const charsW = widths.reduce((a, b) => a + b, 0);
+      const gap = (targetW - charsW) / (chars.length - 1);
+      ctx.textAlign = 'left';
+      let x = x0;
+      chars.forEach((c, i) => {
+        ctx.fillText(c, x, y);
+        x += widths[i] + gap;
+      });
+    }
+
+    function download() {
+      const canvas = document.getElementById('canvas');
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `eva-text-wall-${canvas.width}x${canvas.height}.png`;
+      a.click();
+    }
+
+    uiLang.addEventListener('change', () => setLanguage(uiLang.value));
+    textInput.addEventListener('input', render);
+    fontSize.addEventListener('input', () => {
+      sizeValue.textContent = fontSize.value + 'px';
+      render();
+    });
+    arrangement.addEventListener('change', () => {
+      advancedControls.style.display = arrangement.value === 'advanced' ? 'flex' : 'none';
+      render();
+    });
+    wallRepeat.addEventListener('change', render);
+    wallFill.addEventListener('input', () => {
+      wallFillValue.textContent = wallFill.value + '%';
+      render();
+    });
+    wallTightness.addEventListener('input', () => {
+      wallTightnessValue.textContent = wallTightness.value + '%';
+      render();
+    });
+    wallRatio.addEventListener('input', () => {
+      wallRatioValue.textContent = wallRatio.value + '%';
+      render();
+    });
+    luckyBtn.addEventListener('click', () => {
+      const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      wallFill.value = randInt(0, 100);
+      wallFillValue.textContent = wallFill.value + '%';
+      wallTightness.value = randInt(0, 100);
+      wallTightnessValue.textContent = wallTightness.value + '%';
+      wallRatio.value = randInt(0, 100);
+      wallRatioValue.textContent = wallRatio.value + '%';
+      fontSize.value = randInt(Number(fontSize.min), Number(fontSize.max));
+      sizeValue.textContent = fontSize.value + 'px';
+      render();
+    });
+    textColor.addEventListener('input', render);
+    bgColor.addEventListener('input', render);
+    resetColors.addEventListener('click', () => {
+      textColor.value = '#FFFFFF';
+      bgColor.value = '#000000';
+      render();
+    });
+    sizePreset.addEventListener('change', () => {
+      customSize.style.display = sizePreset.value === 'custom' ? 'flex' : 'none';
+      render();
+    });
+    customW.addEventListener('input', render);
+    customH.addEventListener('input', render);
+    downloadBtn.addEventListener('click', download);
+
+    textInput.value = '新世紀\nエヴァンゲリオン';
+    setLanguage('en');
+  </script>
+</body>
+
+</html>
