@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Node (only relevant if tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Misc
+*.local
+.claude
+.copilot
+.gemini
